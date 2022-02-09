@@ -1,0 +1,256 @@
+---
+title: "Untitled"
+author: "David Alejandro Hernandez Perez"
+date: "4/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Primera imagen trigonometrica:
+```{r}
+library(Rcpp)
+library(ggplot2)
+library(dplyr)
+ 
+opt = theme(legend.position  = "none",
+            panel.background = element_rect(fill="white"),
+            axis.ticks       = element_blank(),
+            panel.grid       = element_blank(),
+            axis.title       = element_blank(),
+            axis.text        = element_blank())
+ 
+cppFunction('DataFrame createTrajectory(int n, double x0, double y0, 
+            double a, double b, double c, double d) {
+            // create the columns
+            NumericVector x(n);
+            NumericVector y(n);
+            x[0]=x0;
+            y[0]=y0;
+            for(int i = 1; i < n; ++i) {
+            x[i] = ((exp(a*y[i-1])-exp(-(a*y[i-1])))/2)+c*cos(a*x[i-1]);
+            y[i] = sin(b*x[i-1])+d*cos(b*y[i-1]);
+            }
+            // return a new data frame
+            return DataFrame::create(_["x"]= x, _["y"]= y);
+            }
+            ')
+
+a=-1.24458046630025
+b=-1.25191834103316 
+c=-1.81590817030519 
+d=-1.90866735205054
+ 
+df=createTrajectory(10000000, 0, 0, a, b, c, d)
+
+ 
+png("Clifford.png", units="px", width=1600, height=1600, res=300)
+ggplot(df, aes(x, y)) + geom_point(color="black", shape=46, alpha=.01) + opt + theme(
+  panel.background = element_rect(fill = "lightblue",
+                                colour = "lightblue"))
+dev.off()
+```
+
+Segunda imagen trigonometrica
+```{r}
+library(generativeart)
+
+# set the paths
+IMG_DIR <- "img/"
+IMG_SUBDIR <- "everything/"
+IMG_SUBDIR2 <- "handpicked/"
+IMG_PATH <- paste0(IMG_DIR, IMG_SUBDIR)
+
+LOGFILE_DIR <- "logfile/"
+LOGFILE <- "logfile.csv"
+LOGFILE_PATH <- paste0(LOGFILE_DIR, LOGFILE)
+
+# create the directory structure
+generativeart::setup_directories(IMG_DIR, IMG_SUBDIR, IMG_SUBDIR2, LOGFILE_DIR)
+
+# include a specific formula, for example:
+set.seed(2612)
+my_formula <- list(
+  x = quote(runif(100, -10, 10) * x_i^2 - sinh(y_i^2)),
+  y = quote(runif(100, -10, 10) * y_i^3 - cos(x_i^2))
+)
+
+# call the main function to create five images with a polar coordinate system
+generativeart::generate_img(formula = my_formula, nr_of_img = 1, polar = TRUE, filetype = "png", color = "#c1a06e",background_color = "#1a3657")
+```
+
+
+CLUSTER 1
+```{r}
+library(mathart)
+k_nearest_neighbour_graph <- function(points, k=8) {
+  get_k_nearest <- function(points, ptnum, k) {
+    xi <- points$x[ptnum]
+    yi <- points$y[ptnum]
+    points %>%
+      dplyr::mutate(dist = sqrt((x - xi)^2 + (y - yi)^2)) %>%
+      dplyr::arrange(dist) %>%
+      dplyr::filter(row_number() %in% seq(2, k+1)) %>%
+      dplyr::mutate(xend = xi, yend = yi)
+  }
+  
+  1:nrow(points) %>%
+    purrr::map_df(~get_k_nearest(points, ., k))
+}
+
+
+set.seed(21)
+df <- lissajous(a = runif(1, 0, 2), b = runif(1, 0, 2), A = runif(1, 0, 2), B = runif(1, 0, 2), d = 200) %>%
+  sample_n(1001) %>%
+  k_nearest_neighbour_graph(40)
+
+p <- ggplot() +
+  geom_segment(aes(x, y, xend = xend, yend = yend), df, size = 0.001) +
+  coord_equal()+
+   theme_blankcanvas(bg_col = "transparent", margin_cm = 0.5)
+
+p
+#ggsave("knn.png", p, width = 25, height = 25, units = "cm")
+```
+
+cluster 2
+```{r}
+library(mathart)
+k_nearest_neighbour_graph <- function(points, k=6) {
+  get_k_nearest <- function(points, ptnum, k) {
+    xi <- points$x[ptnum]
+    yi <- points$y[ptnum]
+    points %>%
+      dplyr::mutate(dist = sqrt((x - xi)^2 + (y - yi)^2)) %>%
+      dplyr::arrange(dist) %>%
+      dplyr::filter(row_number() %in% seq(2, k+1)) %>%
+      dplyr::mutate(xend = xi, yend = yi)
+  }
+  
+  1:nrow(points) %>%
+    purrr::map_df(~get_k_nearest(points, ., k))
+}
+
+
+set.seed(10)
+df <- lissajous(a = runif(1, 5, 10), b = runif(1, 1, 2), A = runif(1, 0, 10), B = runif(1, 1, 2), d = 100) %>%
+  sample_n(500) %>%
+  k_nearest_neighbour_graph(5)
+
+p <- ggplot() +
+  geom_segment(aes(x, y, xend = xend, yend = yend), df, size = 0.001) +
+  coord_equal()+
+   theme_blankcanvas(bg_col = "darkseagreen2", margin_cm = 0.9)
+
+p
+ggsave("knn2.png", p, width = 25, height = 25, units = "cm")
+```
+
+
+#NO SE USARON:
+
+NORMAL MULTIVARIADA
+```{r}
+set.seed(7856)
+n <- 1000
+mu <- c(0,0)
+sigma <- matrix(c(10,3,3,2),2)
+datos <- mvrnorm(n,mu,sigma)
+datos <- as.data.frame(datos)
+
+my_formula <- list(
+  x = quote(datos[,1] + sinh(x_i^2)),
+  y = quote(datos[,2] * cosh(y_i^2))
+)
+
+
+# call the main function to create five images with a polar coordinate system
+generativeart::generate_img(formula = my_formula, nr_of_img = 1, polar = TRUE, filetype = "png", color = "orange", background_color = "black")
+
+```
+
+
+PRUEBAS
+```{r}
+library(MASS)
+library(generativeart) # devtools::install_github("cutterkom/generativeart")
+library(ambient)
+library(dplyr)
+
+# set the paths
+IMG_DIR <- "img/"
+IMG_SUBDIR <- "everything/"
+IMG_SUBDIR2 <- "handpicked/"
+IMG_PATH <- paste0(IMG_DIR, IMG_SUBDIR)
+
+LOGFILE_DIR <- "logfile/"
+LOGFILE <- "logfile.csv"
+LOGFILE_PATH <- paste0(LOGFILE_DIR, LOGFILE)
+
+# create the directory structure
+generativeart::setup_directories(IMG_DIR, IMG_SUBDIR, IMG_SUBDIR2, LOGFILE_DIR)
+
+# include a specific formula, for example:
+my_formula <- list(
+  x = quote(runif(1000, -1, 1) * cosh(x_i^2) + sinh(y_i^2)),
+  y = quote(runif(1000, -1, 1) * sinh(y_i^3) - cosh(x_i^2))
+)
+
+my_formula <- list(
+  x = quote( cosh(x_i^2) + sinh(y_i^2)),
+  y = quote( sinh(y_i^3) - cosh(x_i^2))
+)
+
+
+
+"2022-02-05-21-05_seed_5930.png	5930	runif(1, -10, 10) * x_i^2 - sinh(y_i^2)	runif(1, -10, 10) * y_i^3 - cos(x_i^2)"
+
+
+"2022-02-05-21-06_seed_5824.png	5824	runif(100, -10, 10) * x_i^2 - sinh(y_i^2)	runif(100, -10, 10) * y_i^3 - cos(x_i^2)"
+"2022-02-05-21-08_seed_1117.png	1117	runif(100, -10, 10) * x_i^2 - sinh(y_i^2)	runif(100, -10, 10) * y_i^3 - cos(x_i^2)"
+"2022-02-05-21-08_seed_6524.png	6524	runif(10000, -100, 100) * x_i^2 - sinh(y_i^2)	runif(10000, -100, 100) * y_i^3 - cos(x_i^2)"
+"2022-02-05-21-09_seed_8828.png	8828	runif(100, -10, 10) * x_i^2 - sinh(y_i^2)	runif(100, -10, 10) * y_i^3 - cos(x_i^2)"
+
+
+"2022-02-05-21-12_seed_2495.png	2495	runif(100, -10, 10) * x_i - tanh(y_i^2)	runif(100, -10, 10) * y_i - sen(x_i^3)"
+"2022-02-05-21-12_seed_5751.png	5751	runif(100, -10, 10) * x_i - tanh(y_i^2)	runif(100, -10, 10) * y_i - sin(x_i^3)"
+"2022-02-05-21-14_seed_4086.png	4086	runif(100, -10, 10) * x_i - tanh(y_i^2)	runif(100, -10, 10) * y_i - sin(x_i^3)"
+"2022-02-05-21-15_seed_4086.png	4086	runif(1000, -10, 10) * x_i - tanh(y_i^2)	runif(1000, -10, 10) * y_i - sin(x_i^3)"
+"2022-02-05-21-16_seed_1879.png	1879	runif(1000, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(1000, -10, 10) * y_i - sin(x_i^3)"
+"2022-02-05-21-17_seed_8709.png	8709	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i^3 - sin(x_i^3)"
+"2022-02-05-21-18_seed_5564.png	5564	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i^110 - sin(x_i^3)"
+"2022-02-05-21-18_seed_3511.png	3511	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i^5 - sinh(x_i^3)"
+"2022-02-05-21-19_seed_7806.png	7806	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-19_seed_4653.png	4653	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-20_seed_7172.png	7172	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i - sinh(x_i^3) * y_i"
+"2022-02-05-21-21_seed_1742.png	1742	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * cosh(y_i) - sinh(x_i^3) * y_i"
+"2022-02-05-21-22_seed_896.png	896	runif(100, -10, 10) * x_i - tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * cosh(y_i) * sinh(x_i^3) * y_i"
+"2022-02-05-21-22_seed_9708.png	9708	runif(100, -10, 10) * x_i * tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-23_seed_4032.png	4032	runif(100, -10, 10) * cosh(x_i) * tanh(y_i^2 + x_i^3)	runif(100, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-25_seed_6541.png	6541	runif(100, -10, 10) * (sinh(x_i)/cosh(y_i^2 + x_i^3))	runif(100, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-27_seed_4277.png	4277	runif(1000, -10, 10) * (sinh(x_i)/cosh(y_i^2 + x_i^3))	runif(1000, -10, 10) * y_i - sinh(x_i^3)"
+"2022-02-05-21-28_seed_2698.png	2698	runif(1000, -10, 10) * (sinh(x_i)/cosh(y_i^2 + x_i^3))	runif(1000, -10, 10) * y_i/sinh(x_i^3)"
+"2022-02-05-21-28_seed_5319.png	5319	runif(1000, -1, 1) * (sinh(x_i)/cosh(y_i^2 + x_i^3))	runif(1000, -1, 1) * y_i/sinh(x_i^3)"
+					
+
+
+set.seed(5930)
+my_formula <- list(
+  x = quote(runif(1, -10, 10) * x_i^2 - sinh(y_i^2)),
+  y = quote(runif(1, -10, 10) * y_i^3 - cos(x_i^2))
+)
+generativeart::generate_img(formula = my_formula, nr_of_img = 1, polar = TRUE, filetype = "png", color = "black", background_color = "white")
+
+
+set.seed(2612)
+my_formula <- list(
+  x = quote(runif(100, -10, 10) * x_i^2 - sinh(y_i^2)),
+  y = quote(runif(100, -10, 10) * y_i^3 - cos(x_i^2))
+)
+generativeart::generate_img(formula = my_formula, nr_of_img = 1, polar = TRUE, filetype = "png", color = "#c1a06e",background_color = "#1a3657")
+
+```
+
+
